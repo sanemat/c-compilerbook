@@ -164,6 +164,21 @@ Node *new_num(int val) {
   return node;
 }
 
+Node *expr();
+// expr = num ("+" num | "-" num)*
+Node *expr() {
+  Node *node = new_num(expect_number());
+
+  for (;;) {
+    if (consume('+'))
+      node = new_binary(ND_ADD, node, new_num(expect_number()));
+    else if (consume('-'))
+      node = new_binary(ND_SUB, node, new_num(expect_number()));
+    else
+      return node;
+  }
+}
+
 int main(int argc, char **argv) {
   if (argc != 2) {
     error("引数の個数が正しくありません");
