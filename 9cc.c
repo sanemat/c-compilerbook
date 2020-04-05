@@ -108,7 +108,7 @@ Token *tokenize() {
       continue;
     }
 
-    if (strchr("+-*/", *p)) {
+    if (strchr("+-*/()", *p)) {
       cur = new_token(TK_RESERVED, cur, p++);
       continue;
     }
@@ -168,6 +168,8 @@ Node *new_num(int val) {
 
 Node *expr();
 Node *mul();
+Node *primary();
+
 // expr = mul ("+" mul | "-" mul)*
 Node *expr() {
   Node *node = mul();
@@ -182,18 +184,29 @@ Node *expr() {
   }
 }
 
-// mul  = num ("*" num | "/" num)*
+// mul = primary ("*" primary | "/" primary)*
 Node *mul() {
-  Node *node = new_num(expect_number());
+  Node *node = primary();
 
   for (;;) {
     if (consume('*'))
-      node = new_binary(ND_MUL, node, new_num(expect_number()));
+      node = new_binary(ND_MUL, node, primary());
     else if (consume('/'))
-      node = new_binary(ND_DIV, node, new_num(expect_number()));
+      node = new_binary(ND_DIV, node, primary());
     else
       return node;
   }
+}
+
+// primary = "(" expr ")" | num
+Node *primary() {
+  if (consume('(')) {
+    Node *node = expr();
+    expect(')');
+    return node;
+  }
+
+  return new_num(expect_number());
 }
 
 //
