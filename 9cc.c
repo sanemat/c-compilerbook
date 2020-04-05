@@ -108,7 +108,7 @@ Token *tokenize() {
       continue;
     }
 
-    if (*p == '+' || *p == '-') {
+    if (strchr("+-*/", *p)) {
       cur = new_token(TK_RESERVED, cur, p++);
       continue;
     }
@@ -133,6 +133,8 @@ Token *tokenize() {
 typedef enum {
   ND_ADD, // +
   ND_SUB, // -
+  ND_MUL, // *
+  ND_DIV, // /
   ND_NUM, // Integer
 } NodeKind;
 
@@ -165,15 +167,30 @@ Node *new_num(int val) {
 }
 
 Node *expr();
-// expr = num ("+" num | "-" num)*
+Node *mul();
+// expr = mul ("+" mul | "-" mul)*
 Node *expr() {
-  Node *node = new_num(expect_number());
+  Node *node = mul();
 
   for (;;) {
     if (consume('+'))
-      node = new_binary(ND_ADD, node, new_num(expect_number()));
+      node = new_binary(ND_ADD, node, mul());
     else if (consume('-'))
-      node = new_binary(ND_SUB, node, new_num(expect_number()));
+      node = new_binary(ND_SUB, node, mul());
+    else
+      return node;
+  }
+}
+
+// mul  = num ("*" num | "/" num)*
+Node *mul() {
+  Node *node = new_num(expect_number());
+
+  for (;;) {
+    if (consume('*'))
+      node = new_binary(ND_MUL, node, new_num(expect_number()));
+    else if (consume('/'))
+      node = new_binary(ND_DIV, node, new_num(expect_number()));
     else
       return node;
   }
@@ -201,6 +218,13 @@ void gen(Node *node) {
     break;
   case ND_SUB:
     printf("  sub rax, rdi\n");
+    break;
+  case ND_MUL:
+    printf("  imul rax, rdi\n");
+    break;
+  case ND_DIV:
+    printf("  cqo\n");
+    printf("  idiv rdi\n");
     break;
   }
 
