@@ -115,7 +115,7 @@ Token *tokenize() {
     }
 
     // Multi-letter punctuator
-    if (startswith(p, "==")) {
+    if (startswith(p, "==") || startswith(p, "!=")) {
       cur = new_token(TK_RESERVED, cur, p, 2);
       p += 2;
       continue;
@@ -152,6 +152,7 @@ typedef enum {
   ND_MUL, // *
   ND_DIV, // /
   ND_EQ,  // ==
+  ND_NE,  // !=
   ND_NUM, // Integer
 } NodeKind;
 
@@ -195,13 +196,15 @@ Node *expr() {
   return equality();
 }
 
-// equality = add ("==" add)*
+// equality = add ("==" add | "!=" add)*
 Node *equality() {
   Node *node = add();
 
   for (;;) {
     if (consume("=="))
       node = new_binary(ND_EQ, node, add());
+    else if (consume("!="))
+      node = new_binary(ND_NE, node, add());
     else
       return node;
   }
@@ -290,6 +293,10 @@ void gen(Node *node) {
     printf("  sete al\n");
     printf("  movzb rax, al\n");
     break;
+  case ND_NE:
+    printf("  cmp rax, rdi\n");
+    printf("  setne al\n");
+    printf("  movzb rax, al\n");
   }
 
   printf("  push rax\n");
