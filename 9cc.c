@@ -22,6 +22,7 @@ struct Token {
   Token *next;    // 次の入力トークン
   int val;        // kindがTK_NUMの場合、その数値
   char *str;      // トークン文字列
+  int len;        // Token length
 };
 
 // Input program
@@ -56,8 +57,8 @@ void error_at(char *loc, char *fmt, ...) {
 
 // 次のトークンが期待している記号のときには、トークンを1つ読み進めて
 // 真を返す。それ以外の場合には偽を返す。
-bool consume(char op) {
-  if (token->kind != TK_RESERVED || token->str[0] != op)
+bool consume(char *op) {
+  if (token->kind != TK_RESERVED || strlen(op) != token->len || memcmp(token->str, op, token->len))
     return false;
   token = token->next;
   return true;
@@ -65,9 +66,9 @@ bool consume(char op) {
 
 // 次のトークンが期待している記号のときには、トークンを1つ読み進める。
 // それ以外の場合にはエラーを報告する。
-void expect(char op) {
-  if (token->kind != TK_RESERVED || token->str[0] != op)
-    error_at(token->str, "'%c'ではありません", op);
+void expect(char *op) {
+  if (token->kind != TK_RESERVED || strlen(op) != token->len || memcmp(token->str, op, token->len))
+    error_at(token->str, "expected \"%s\"", op);
   token = token->next;
 }
 
@@ -86,10 +87,11 @@ bool at_eof() {
 }
 
 // 新しいトークンを作成してcurに繋げる
-Token *new_token(TokenKind kind, Token *cur, char *str) {
+Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
   Token *tok = calloc(1, sizeof(Token));
   tok->kind = kind;
   tok->str = str;
+  tok->len = len;
   cur->next = tok;
   return tok;
 }
@@ -109,20 +111,22 @@ Token *tokenize() {
     }
 
     if (strchr("+-*/()", *p)) {
-      cur = new_token(TK_RESERVED, cur, p++);
+      cur = new_token(TK_RESERVED, cur, p++, 1);
       continue;
     }
 
     if (isdigit(*p)) {
-      cur = new_token(TK_NUM, cur, p);
+      cur = new_token(TK_NUM, cur, p, 0);
+      char *q = p;
       cur->val = strtol(p, &p, 10);
+      cur->len = p - q;
       continue;
     }
 
     error_at(p, "invalid token");
   }
 
-  new_token(TK_EOF, cur, p);
+  new_token(TK_EOF, cur, p, 0);
   return head.next;
 }
 
@@ -176,9 +180,9 @@ Node *expr() {
   Node *node = mul();
 
   for (;;) {
-    if (consume('+'))
+    if (consume("+"))
       node = new_binary(ND_ADD, node, mul());
-    else if (consume('-'))
+    else if (consume("-"))
       node = new_binary(ND_SUB, node, mul());
     else
       return node;
@@ -190,9 +194,9 @@ Node *mul() {
   Node *node = unary();
 
   for (;;) {
-    if (consume('*'))
+    if (consume("*"))
       node = new_binary(ND_MUL, node, unary());
-    else if (consume('/'))
+    else if (consume("/"))
       node = new_binary(ND_DIV, node, unary());
     else
       return node;
@@ -201,18 +205,18 @@ Node *mul() {
 
 // unary   = ("+" | "-")? unary | primary
 Node *unary() {
-  if (consume('+'))
+  if (consume("+"))
     return unary();
-  if (consume('-'))
+  if (consume("-"))
     return new_binary(ND_SUB, new_num(0), unary());
   return primary();
 }
 
 // primary = "(" expr ")" | num
 Node *primary() {
-  if (consume('(')) {
+  if (consume("(")) {
     Node *node = expr();
-    expect(')');
+    expect(")");
     return node;
   }
 
