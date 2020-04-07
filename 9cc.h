@@ -63,4 +63,4 @@ Node *expr();
 
 // codegen.c
 
-void gen(Node *node);
+void codegen(Node *node);
