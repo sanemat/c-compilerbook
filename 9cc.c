@@ -96,6 +96,10 @@ Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
   return tok;
 }
 
+bool startswith(char *p, char *q) {
+  return memcmp(p, q, strlen(q)) == 0;
+}
+
 // Tokenize `user_input` and returns new tokens.
 Token *tokenize() {
   char *p = user_input;
@@ -110,6 +114,14 @@ Token *tokenize() {
       continue;
     }
 
+    // Multi-letter punctuator
+    if (startswith(p, "==") || startswith(p, "!=")) {
+      cur = new_token(TK_RESERVED, cur, p, 2);
+      p += 2;
+      continue;
+    }
+
+    // Single-letter punctuator
     if (strchr("+-*/()", *p)) {
       cur = new_token(TK_RESERVED, cur, p++, 1);
       continue;
@@ -139,6 +151,8 @@ typedef enum {
   ND_SUB, // -
   ND_MUL, // *
   ND_DIV, // /
+  ND_EQ,  // ==
+  ND_NE,  // !=
   ND_NUM, // Integer
 } NodeKind;
 
@@ -171,12 +185,33 @@ Node *new_num(int val) {
 }
 
 Node *expr();
+Node *equality();
+Node *add();
 Node *mul();
 Node *primary();
 Node *unary();
 
-// expr = mul ("+" mul | "-" mul)*
+// expr = equality
 Node *expr() {
+  return equality();
+}
+
+// equality = add ("==" add | "!=" add)*
+Node *equality() {
+  Node *node = add();
+
+  for (;;) {
+    if (consume("=="))
+      node = new_binary(ND_EQ, node, add());
+    else if (consume("!="))
+      node = new_binary(ND_NE, node, add());
+    else
+      return node;
+  }
+}
+
+// add = mul ("+" mul | "-" mul)*
+Node *add() {
   Node *node = mul();
 
   for (;;) {
@@ -253,6 +288,15 @@ void gen(Node *node) {
     printf("  cqo\n");
     printf("  idiv rdi\n");
     break;
+  case ND_EQ:
+    printf("  cmp rax, rdi\n");
+    printf("  sete al\n");
+    printf("  movzb rax, al\n");
+    break;
+  case ND_NE:
+    printf("  cmp rax, rdi\n");
+    printf("  setne al\n");
+    printf("  movzb rax, al\n");
   }
 
   printf("  push rax\n");
