@@ -122,7 +122,7 @@ Token *tokenize() {
     }
 
     // Single-letter punctuator
-    if (strchr("+-*/()<", *p)) {
+    if (strchr("+-*/()<>", *p)) {
       cur = new_token(TK_RESERVED, cur, p++, 1);
       continue;
     }
@@ -213,7 +213,7 @@ Node *equality() {
   }
 }
 
-// relational = add ("<" add | "<=" add)*
+// relational = add ("<" add | "<=" add | ">" add)*
 Node *relational() {
   Node *node = add();
 
@@ -222,6 +222,8 @@ Node *relational() {
       node = new_binary(ND_LT, node, add());
     else if (consume("<="))
       node = new_binary(ND_LE, node, add());
+    else if (consume(">"))
+      node = new_binary(ND_LT, add(), node);
     else
       return node;
   }
