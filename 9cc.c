@@ -115,7 +115,7 @@ Token *tokenize() {
     }
 
     // Multi-letter punctuator
-    if (false) {
+    if (startswith(p, "==")) {
       cur = new_token(TK_RESERVED, cur, p, 2);
       p += 2;
       continue;
@@ -151,6 +151,7 @@ typedef enum {
   ND_SUB, // -
   ND_MUL, // *
   ND_DIV, // /
+  ND_EQ,  // ==
   ND_NUM, // Integer
 } NodeKind;
 
@@ -183,12 +184,31 @@ Node *new_num(int val) {
 }
 
 Node *expr();
+Node *equality();
+Node *add();
 Node *mul();
 Node *primary();
 Node *unary();
 
-// expr = mul ("+" mul | "-" mul)*
+// expr = equality
 Node *expr() {
+  return equality();
+}
+
+// equality = add ("==" add)*
+Node *equality() {
+  Node *node = add();
+
+  for (;;) {
+    if (consume("=="))
+      node = new_binary(ND_EQ, node, add());
+    else
+      return node;
+  }
+}
+
+// add = mul ("+" mul | "-" mul)*
+Node *add() {
   Node *node = mul();
 
   for (;;) {
@@ -264,6 +284,11 @@ void gen(Node *node) {
   case ND_DIV:
     printf("  cqo\n");
     printf("  idiv rdi\n");
+    break;
+  case ND_EQ:
+    printf("  cmp rax, rdi\n");
+    printf("  sete al\n");
+    printf("  movzb rax, al\n");
     break;
   }
 

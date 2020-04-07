@@ -27,4 +27,7 @@ assert 10 '-10+20'
 assert 10 '- -10'
 assert 10 '- - +10'
 
+assert 0 '0==1'
+assert 1 '42==42'
+
 echo OK
