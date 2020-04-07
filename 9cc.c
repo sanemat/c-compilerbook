@@ -115,7 +115,7 @@ Token *tokenize() {
     }
 
     // Multi-letter punctuator
-    if (startswith(p, "==") || startswith(p, "!=") || startswith(p, "<=")) {
+    if (startswith(p, "==") || startswith(p, "!=") || startswith(p, "<=") || startswith(p, ">=")) {
       cur = new_token(TK_RESERVED, cur, p, 2);
       p += 2;
       continue;
@@ -213,7 +213,7 @@ Node *equality() {
   }
 }
 
-// relational = add ("<" add | "<=" add | ">" add)*
+// relational = add ("<" add | "<=" add | ">" add | ">=" add)*
 Node *relational() {
   Node *node = add();
 
@@ -224,6 +224,8 @@ Node *relational() {
       node = new_binary(ND_LE, node, add());
     else if (consume(">"))
       node = new_binary(ND_LT, add(), node);
+    else if (consume(">="))
+      node = new_binary(ND_LE, add(), node);
     else
       return node;
   }
