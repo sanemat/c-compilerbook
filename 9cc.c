@@ -96,6 +96,10 @@ Token *new_token(TokenKind kind, Token *cur, char *str, int len) {
   return tok;
 }
 
+bool startswith(char *p, char *q) {
+  return memcmp(p, q, strlen(q)) == 0;
+}
+
 // Tokenize `user_input` and returns new tokens.
 Token *tokenize() {
   char *p = user_input;
@@ -110,6 +114,14 @@ Token *tokenize() {
       continue;
     }
 
+    // Multi-letter punctuator
+    if (false) {
+      cur = new_token(TK_RESERVED, cur, p, 2);
+      p += 2;
+      continue;
+    }
+
+    // Single-letter punctuator
     if (strchr("+-*/()", *p)) {
       cur = new_token(TK_RESERVED, cur, p++, 1);
       continue;
